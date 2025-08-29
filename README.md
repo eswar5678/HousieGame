@@ -49,3 +49,6 @@ Open in browser:
 
 http://localhost:3000
 
+👨‍💻 Author
+
+Developed by Eswar Marri 🚀
