@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Join as Player - Tambola</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body {
+      background: linear-gradient(135deg, #5ad7ff 0%, #726cf8 100%);
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    .container {
+      background: rgba(255,255,255,0.15);
+      padding: 2rem 2.5rem;
+      border-radius: 18px;
+      box-shadow: 0 10px 32px rgba(114,108,248,0.12);
+      width: 360px;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 1.5rem;
+      font-weight: 700;
+      color: #726cf8;
+      text-shadow: 0 2px 12px #fff;
+    }
+    label {
+      display: block;
+      text-align: left;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+      color: #726cf8;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+    input, button {
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: none;
+      font-size: 1rem;
+      font-family: 'Poppins', sans-serif;
+      box-sizing: border-box;
+    }
+    input {
+      outline: none;
+      color: #726cf8;
+      background: #f2f9ff;
+      font-weight: 600;
+      border: 2px solid #ddd;
+      margin-bottom: 0.25rem;
+    }
+    input:focus {
+      border-color: #726cf8;
+      background: #e5e5ff;
+    }
+    button {
+      background: #f2f9ff;
+      color: #726cf8;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(114,108,248,0.12);
+      transition: background 0.3s, color 0.3s;
+    }
+    button:hover {
+      background: #726cf8;
+      color: #fff;
+      box-shadow: 0 5px 20px rgba(114,108,248,0.20);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Join as Player</h2>
+    <form id="playerForm">
+      <label for="playerName">Your Name</label>
+      <input type="text" id="playerName" name="playerName" required />
+
+      <label for="roomId">Room ID</label>
+      <input type="text" id="roomId" name="roomId" required />
+
+      <!--<label for="numTickets">Number of Tickets</label>
+      <input type="number" id="numTickets" name="numTickets" min="1" max="10" value="1" required />-->
+
+      <button type="submit">Join Room</button>
+    </form>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    document.getElementById('playerForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const playerName = document.getElementById('playerName').value.trim();
+      const roomId = document.getElementById('roomId').value.trim();
+    
+      if (!roomId || !playerName) {
+        alert('Please enter both your name and room ID.');
+        return;
+      }
+      socket.emit('joinRoom', { roomId, player: playerName });
+      sessionStorage.setItem('currentPlayerName', playerName);
+      //sessionStorage.setItem('numTickets', numTickets);
+    });
+
+    socket.on('roomJoined', (roomData) => {
+      window.location.href = `room.html?roomId=${roomData.roomId}`;
+    });
+
+    socket.on('joinError', (msg) => {
+      alert(msg);
+    });
+  </script>
+</body>
+</html>

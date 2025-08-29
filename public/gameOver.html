@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Game Over - Housie</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #726cf8 40%, #5ad7ff 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      margin: 0;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      text-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    table {
+      border-collapse: collapse;
+      background: rgba(255,255,255,0.9);
+      color: #726cf8;
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 2rem;
+    }
+    th, td {
+      border: 1px solid #726cf8;
+      padding: 10px 14px;
+      text-align: center;
+      font-size: 1rem;
+      vertical-align: top;
+    }
+    th {
+      background-color: #726cf8;
+      color: #fff;
+      font-weight: 600;
+    }
+    button {
+      padding: 12px 28px;
+      border: none;
+      border-radius: 12px;
+      background: #fff;
+      color: #726cf8;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 5px 12px rgba(114,108,248,0.3);
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #FFFFFF26;
+      color: #fff;
+    }
+    .ticket-claims p, .ticket-numbers p {
+      margin: 2px 0;
+      font-size: 0.9rem;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎉 Game Over 🎉</h1>
+  <table id="resultsTable">
+    <thead>
+      <tr>
+        <th>Player</th>
+        <th>No. of Tickets</th>
+        <th>Ticket Numbers</th>
+        <th>Claims per Ticket</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <button onclick="goHome()">Go to Home</button>
+
+  <script>
+    const results = JSON.parse(sessionStorage.getItem("gameResults") || "[]");
+    const tbody = document.querySelector("#resultsTable tbody");
+
+    if (results.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4">No results available</td></tr>`;
+    } else {
+      results.forEach(player => {
+        const tr = document.createElement("tr");
+
+        // Ticket numbers column
+        const ticketsHTML = player.tickets && player.tickets.length > 0
+          ? player.tickets.map((t, i) => `<p>Ticket ${i + 1}</p>`).join('')
+          : "—";
+
+        // Claims per ticket column
+        const claimsHTML = player.tickets && player.tickets.length > 0
+          ? player.tickets.map((t, i) => {
+              const ticketClaims = player.claims
+                ? player.claims.filter(c => c.ticketIndex === i).map(c => c.claimType)
+                : [];
+              return `<p>${ticketClaims.length > 0 ? ticketClaims.join(", ") : "—"}</p>`;
+            }).join('')
+          : "—";
+
+        tr.innerHTML = `
+          <td>${player.name}</td>
+          <td>${player.tickets ? player.tickets.length : 0}</td>
+          <td class="ticket-numbers">${ticketsHTML}</td>
+          <td class="ticket-claims">${claimsHTML}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function goHome() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tambola Game</title>
+    <style>
+        body {
+          font-family: 'Poppins', sans-serif;
+          background: linear-gradient(135deg, #726cf8 40%, #5ad7ff 100%);
+          color: #fff;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 2rem;
+          margin: 0;
+        }
+        h1, h2 {
+          font-weight: 600;
+          margin-bottom: 1.5rem;
+          text-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        #roomIdDisplay {
+          font-weight: 600;
+          margin-bottom: 2rem;
+          font-size: 1.25rem;
+          word-break: break-word; /* To avoid overflow on small screens */
+        }
+        #tickets-container {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 16px;
+          justify-content: center;
+          width: 100%;
+          max-width: 640px;
+          box-sizing: border-box;
+          margin: 0 auto;
+        }
+        .ticket {
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 12px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+          padding: 10px;
+          display: grid;
+          grid-template-columns: repeat(9, 1fr);
+          gap: 6px;
+          width: 100%;
+          max-width: 280px;  /* Limit max ticket width for larger screens */
+          box-sizing: border-box;
+        }
+		.number-cell, .empty-cell {
+		  display: flex;
+		  align-items: center;
+		  justify-content: center;
+
+		  border-radius: 6px;
+		  font-weight: 700;
+		  font-size: clamp(0.8rem, 2.5vw, 1rem); /* responsive font size */
+		  text-align: center;
+
+		  aspect-ratio: 1 / 1;   /* keeps square cells */
+		  width: 100%;
+		  min-width: 28px;       /* ensures minimum tap-friendly size */
+		  
+		  color: #726cf8;
+		  background-color: #f2f9ff;
+		  transition: background-color 0.2s ease, color 0.2s ease;
+		  box-sizing: border-box;  /* ensures padding/border don’t break alignment */
+		}
+
+		.empty-cell {
+		  background-color: white;
+		}
+
+		.number-cell.marked {
+		  background-color: #726cf8;
+		  color: white;
+		}
+		@media (max-width: 600px) {
+		  .number-cell, .empty-cell {
+			font-size: clamp(0.8rem, 2.5vw, 1rem);
+			padding: 2px;
+		  }
+		}
+
+		/* 💻 Desktop (min 601px) → larger font */
+		@media (min-width: 600px) {
+		  .number-cell, .empty-cell {
+			font-size: clamp(1rem, 1.5vw, 1.4rem);
+			padding: 4px;
+		  }
+		}
+
+        /* Responsive adjustments for smaller devices */
+        @media (max-width: 520px) {
+          #tickets-container {
+            gap: 10px;
+          }
+          
+          .ticket {
+            max-width: 100%;
+            padding: 8px;
+            grid-template-columns: repeat(9, minmax(0, 1fr));
+            gap: 4px;
+          }
+          .number-cell, .empty-cell {
+            max-width: none;
+            font-size: 0.85rem;
+            min-width: 20px;
+          }
+        }
+        #host-controls {
+          margin-top: 2rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 100%;
+          max-width: 640px;
+          box-sizing: border-box;
+        }
+        #callNextBtn {
+          background: #fff;
+          color: #726cf8;
+          font-weight: 700;
+          border: none;
+          border-radius: 12px;
+          padding: 14px 32px;
+          margin-bottom: 30px;
+          cursor: pointer;
+          box-shadow: 0 5px 12px rgba(114,108,248,0.7);
+          transition: background-color 0.3s ease, color 0.3s ease;
+          width: 100%;
+          max-width: 300px;
+          box-sizing: border-box;
+        }
+        #callNextBtn:hover {
+          background-color: #FFFFFF26;
+          color: white;
+        }
+        #called-numbers-display {
+          background: rgba(255, 255, 255, 0.15);
+          padding: 1.5rem;
+          border-radius: 18px;
+          margin-top: 2rem;
+          width: 100%;
+          max-width: 440px;
+          text-align: center;
+          box-sizing: border-box;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        #calledNumbersList {
+          display: grid;
+          grid-template-columns: repeat(10, 1fr); /* 10 columns with equal fractional width */
+          gap: 8px;
+          width: 100%;
+          max-width: 440px;
+          margin: 0 auto;
+          box-sizing: border-box;
+        }
+        #calledNumbersList span {
+          background: #f2f9ff;
+          color: #726cf8;
+          font-weight: 700;
+          border-radius: 9px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1rem;
+          box-shadow: 0 1px 5px rgba(100, 100, 150, 0.06);
+          cursor: default;
+          
+          aspect-ratio: 1 / 1;      /* Make cell perfectly square */
+          width: 100%;              /* Take full width of the grid column */
+          min-width: 24px;          /* Minimum size constraint */
+          max-width: 60px;          /* Maximum size constraint */
+          padding: 0;               /* Remove padding to keep size consistent */
+        }
+        /* Highlight called numbers */
+        #calledNumbersList span.is-called {
+          background: #726cf8;
+          color: #fff;
+          border: 2px solid #4826bc;
+          box-shadow: 0 0 8px #726cf8cc;
+        }
+        /* Responsive adjustment: fewer columns on small screens */
+        @media (max-width: 480px) {
+          #calledNumbersList {
+            grid-template-columns: repeat(5, 1fr);
+            max-width: 100%;
+          }
+        }
+        #showCalledNumbersBtn {
+          background: #fff;
+          color: #726cf8;
+          font-weight: 700;
+          border: none;
+          border-radius: 12px;
+          padding: 14px 32px;
+          cursor: pointer;
+          box-shadow: 0 5px 12px rgba(114,108,248,0.7);
+          transition: background-color 0.3s ease, color 0.3s ease;
+          width: 100%;
+          max-width: 300px;
+          box-sizing: border-box;
+		  margin-left: 10px;
+		  margin-right: 10px;
+
+        }
+        #showCalledNumbersBtn:hover {
+          background-color: #FFFFFF26;
+          color: white;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+          #tickets-container {
+            gap: 12px;
+          }
+          .ticket {
+            max-width: 100%;
+            grid-template-columns: repeat(9, minmax(0, 1fr));
+            gap: 3px;
+            padding: 8px;
+          }
+          .number-cell {
+            font-size: 1rem;
+            padding: 6px;
+          }
+          #calledNumbersList {
+            display: none;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+          }
+          #calledNumbersList span {
+            padding: 8px;
+            font-size: 0.9rem;
+          }
+          #callNextBtn, #showCalledNumbersBtn {
+            max-width: 100%;
+            padding: 12px 20px;
+            font-size: 1rem;
+          }
+        }
+        #number-loader-container {
+          position: relative;
+          width: 66px;
+          height: 66px;
+        }
+        #loading-ring {
+          position: absolute;
+          top: 0; left: 0;
+          z-index: 1;
+        }
+        #current-number-circle {
+          position: absolute;
+          top: 0; left: 0;
+          width: 66px; height: 66px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #fff;
+          color: #726cf8;
+          font-size: 2rem;
+          font-weight: 800;
+          border-radius: 50%;
+          box-shadow: 0 0 10px #726cf8a0;
+          z-index: 2;
+        }
+        .called-number-cell {
+          background: #f2f9ff;
+          color: #726cf8;
+          font-weight: 700;
+          border-radius: 9px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1rem;
+          box-shadow: 0 1px 5px rgba(100, 100, 150, 0.06);
+          cursor: default;
+          aspect-ratio: 1 / 1;
+          width: 100%;
+          min-width: 24px;
+          max-width: 60px;
+          padding: 0;
+        }
+        .called-number-cell.is-called {
+          background: #726cf8;
+          color: #fff;
+          border: 2px solid #4826bc;
+          box-shadow: 0 0 8px #726cf8cc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to Housie Game</h1>
+    <div><strong>Room ID: </strong><span id="roomIdDisplay"></span></div>
+
+    <div id="current-number-area" style="display:none; margin-bottom:22px;">
+      <div id="number-loader-container">
+        <svg id="loading-ring" width="66" height="66">
+          <circle cx="33" cy="33" r="28" stroke="#726cf8" stroke-width="5" fill="none" stroke-linecap="round"
+            stroke-dasharray="176" stroke-dashoffset="176"/>
+        </svg>
+        <div id="current-number-circle"></div>
+      </div>
+    </div>
+
+    <div id="tickets-container"></div>
+    <div id="claim-notifications" style="margin-top:20px; width:100%; max-width:640px;"></div>
+    <button id="showCalledNumbersBtn" class="btn-style" style="margin-top:15px;">Show Called Numbers</button>
+    <div id="called-numbers-display">
+        <h2>Called Numbers</h2>
+        <div id="calledNumbersList" style="display:block;"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+  const socket = io();
+  const roomId = new URLSearchParams(window.location.search).get('roomId');
+  const hostName = sessionStorage.getItem('hostName');
+  const currentPlayerName = sessionStorage.getItem('currentPlayerName');
+
+  document.getElementById('roomIdDisplay').textContent = roomId;
+
+  const ticketsContainer = document.getElementById('tickets-container');
+  const calledNumbersList = document.getElementById('calledNumbersList');
+  const showCalledNumbersBtn = document.getElementById('showCalledNumbersBtn');
+  const currentNumberArea = document.getElementById('current-number-area');
+  const currentNumberCircle = document.getElementById('current-number-circle');
+  const loadingRing = document.getElementById('loading-ring').querySelector('circle');
+
+  calledNumbersList.style.display = 'none';
+  currentNumberArea.style.display = 'none';
+
+  let calledNumbersSet = new Set();
+  let lastCalledNumber = null;
+  let isPaused = false;
+
+  // Render tickets
+  function createTickets(tickets) {
+    ticketsContainer.innerHTML = '';
+    tickets.forEach((ticket, ticketIndex) => {
+      const ticketWrapper = document.createElement('div');
+      ticketWrapper.style.position = 'relative';
+      ticketWrapper.style.marginBottom = '30px';
+
+      // Claim button
+      const claimBtn = document.createElement('button');
+      claimBtn.textContent = 'Claim';
+      claimBtn.style.fontSize = '0.85rem';
+      claimBtn.style.padding = '4px 8px';
+      claimBtn.style.cursor = 'pointer';
+      claimBtn.style.marginBottom = '6px';
+      claimBtn.style.background = '#fff';
+      claimBtn.style.color = '#726cf8';
+      claimBtn.style.fontWeight = '700';
+      claimBtn.style.borderRadius = '8px';
+      claimBtn.style.border = 'none';
+      claimBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+      ticketWrapper.appendChild(claimBtn);
+
+      // Claim menu
+      const claimMenu = document.createElement('div');
+      claimMenu.style.display = 'none';
+      claimMenu.style.flexDirection = 'column';
+      claimMenu.style.background = '#fff';
+      claimMenu.style.color = '#726cf8';
+      claimMenu.style.borderRadius = '6px';
+      claimMenu.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+      claimMenu.style.position = 'absolute';
+      claimMenu.style.top = '30px';
+      claimMenu.style.left = '50%';
+      claimMenu.style.transform = 'translateX(-50%)';
+      claimMenu.style.zIndex = '10';
+
+      ['Early Five','Top Line','Middle Line','Bottom Line','Full House'].forEach(claim => {
+	  const option = document.createElement('div');
+	  option.textContent = claim;
+	  option.style.padding = '6px 12px';
+	  option.style.cursor = 'pointer';
+	  option.addEventListener('click', () => {
+		if (checkClaim(ticketDiv, claim)) {
+		  option.style.background = '#726cf8';
+		  option.style.color = 'white';
+		  //alert(`${claim} is valid!`);
+
+		  // 🔹 Send claim to server with correct ticketIndex
+		  const ticketIndex = Array.from(ticketsContainer.children).indexOf(ticketWrapper);
+		  console.log("📤 Sending claim:", { roomId, player: currentPlayerName, ticketIndex, claimType: claim });
+
+		  socket.emit("ticketClaim", {
+			roomId,
+			player: currentPlayerName,
+			ticketIndex: ticketIndex,
+			claimType: claim
+		  });
+
+		} else {
+		  //alert(`${claim} is invalid!`);
+		}
+		claimMenu.style.display = 'none';
+	  });
+	  claimMenu.appendChild(option);
+	});
+
+
+      claimBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        claimMenu.style.display = claimMenu.style.display === 'flex' ? 'none' : 'flex';
+      });
+      document.addEventListener('click', () => {
+        claimMenu.style.display = 'none';
+      });
+
+      ticketWrapper.appendChild(claimMenu);
+
+      // Ticket numbers
+      const ticketDiv = document.createElement('div');
+      ticketDiv.className = 'ticket';
+      ticket.forEach(row => {
+        row.forEach(number => {
+          const cell = document.createElement('div');
+          cell.className = number !== null ? 'number-cell' : 'empty-cell';
+          cell.textContent = number !== null ? number : '';
+          if (number !== null) {
+            cell.dataset.number = number;
+            cell.addEventListener('click', () => {
+              const num = parseInt(cell.dataset.number);
+              if (calledNumbersSet.has(num)) {
+                cell.classList.toggle('marked');
+              }
+            });
+          }
+          ticketDiv.appendChild(cell);
+        });
+      });
+
+      ticketWrapper.appendChild(ticketDiv);
+      ticketsContainer.appendChild(ticketWrapper);
+    });
+  }
+
+  function checkClaim(ticketDiv, claimType) {
+    const rows = [[], [], []];
+    let colIndex = 0;
+
+    ticketDiv.querySelectorAll('.ticket > div').forEach(cell => {
+      const row = Math.floor(colIndex / 9);
+      if (cell.classList.contains('number-cell')) {
+        rows[row].push(cell);
+      }
+      colIndex++;
+    });
+
+    switch(claimType) {
+      case 'Top Line':
+        return rows[0].length > 0 && rows[0].every(cell => cell.classList.contains('marked'));
+      case 'Middle Line':
+        return rows[1].length > 0 && rows[1].every(cell => cell.classList.contains('marked'));
+      case 'Bottom Line':
+        return rows[2].length > 0 && rows[2].every(cell => cell.classList.contains('marked'));
+      case 'Early Five':
+        const markedCount = [...ticketDiv.querySelectorAll('.number-cell')].filter(cell => cell.classList.contains('marked')).length;
+        return markedCount >= 5;
+      case 'Full House':
+        const total = ticketDiv.querySelectorAll('.number-cell').length;
+        const marked = ticketDiv.querySelectorAll('.number-cell.marked').length;
+        return total === marked;
+    }
+  }
+
+  // Called numbers grid
+  function renderCalledNumbersGrid() {
+    calledNumbersList.innerHTML = '';
+    const grid = document.createElement('div');
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(10, 1fr)';
+    grid.style.gridGap = '8px';
+    grid.style.width = '100%';
+    grid.style.maxWidth = '440px';
+    grid.style.margin = '0 auto';
+    grid.style.boxSizing = 'border-box';
+
+    for (let num = 1; num <= 90; num++) {
+      const cell = document.createElement('div');
+      cell.textContent = num;
+      cell.className = 'called-number-cell';
+      if (calledNumbersSet.has(num)) {
+        cell.classList.add('is-called');
+      }
+      grid.appendChild(cell);
+    }
+    calledNumbersList.appendChild(grid);
+  }
+
+  // Toggle numbers grid
+  showCalledNumbersBtn.addEventListener('click', () => {
+    if (calledNumbersList.style.display === 'none' || !calledNumbersList.style.display) {
+      calledNumbersList.style.display = 'block';
+      renderCalledNumbersGrid();
+      showCalledNumbersBtn.textContent = 'Hide Called Numbers';
+    } else {
+      calledNumbersList.style.display = 'none';
+      showCalledNumbersBtn.textContent = 'Show Called Numbers';
+    }
+  });
+
+  // Animate ring
+  function animateLoadingRing(duration) {
+    let start = null;
+    function animate(ts) {
+      if (!start) start = ts;
+      const elapsed = ts - start;
+      const progress = Math.min(elapsed / duration, 1);
+      loadingRing.setAttribute('stroke-dashoffset', 176 * (1 - progress));
+      if (progress < 1 && !isPaused) {
+        requestAnimationFrame(animate);
+      } else {
+        loadingRing.setAttribute('stroke-dashoffset', 176);
+      }
+    }
+    requestAnimationFrame(animate);
+  }
+
+  function showCurrentNumber(text) {
+    currentNumberCircle.textContent = text;
+    currentNumberArea.style.display = 'block';
+  }
+
+  // 🔹 Toggle pause/resume on circle click
+  currentNumberCircle.addEventListener('click', () => {
+    socket.emit("togglePause", { roomId });
+  });
+
+  // Tickets from server
+  socket.on('yourTickets', data => {
+    if (data.tickets && data.tickets.length > 0) createTickets(data.tickets);
+    calledNumbersSet = new Set(data.calledNumbers || []);
+    if (calledNumbersList.style.display === 'block') renderCalledNumbersGrid();
+
+    if (data.calledNumbers && data.calledNumbers.length > 0) {
+      lastCalledNumber = data.calledNumbers[data.calledNumbers.length - 1];
+      showCurrentNumber(lastCalledNumber);
+    }
+  });
+
+  // Countdown sync
+  socket.on('countdown', (timeLeft) => {
+    showCurrentNumber(timeLeft);
+    if (!isPaused) animateLoadingRing(1000);
+  });
+
+  // New number called
+  socket.on('numberCalled', (number, allCalled) => {
+    calledNumbersSet = new Set(allCalled);
+    lastCalledNumber = number;
+    if (!isPaused) {
+      showCurrentNumber(number);
+      animateLoadingRing(3000);
+    }
+    if (calledNumbersList.style.display === 'block') renderCalledNumbersGrid();
+  });
+
+  // Game start
+  socket.on('gameStarted', ({ message }) => {
+    alert(message || 'Game started! Countdown begins...');
+    currentNumberArea.style.display = 'block';
+  });
+
+  // Game paused
+  socket.on("gamePaused", () => {
+    isPaused = true;
+    currentNumberCircle.textContent = "⏸";
+    loadingRing.setAttribute("stroke-dashoffset", 176);
+  });
+
+  // Game resumed
+  socket.on("gameResumed", () => {
+    isPaused = false;
+    if (lastCalledNumber !== null) {
+      showCurrentNumber(lastCalledNumber);
+    }
+    animateLoadingRing(3000);
+  });
+	  // Highlight claimed ticket
+	socket.on("claimApproved", ({ player, ticketIndex, claimType }) => {
+  // Remove this claimType from all claim menus
+  const allTicketWrappers = ticketsContainer.querySelectorAll('div.ticket').forEach(ticketDiv => {
+    const claimMenu = ticketDiv.parentElement.querySelector('div'); // first div after claimBtn
+    if (!claimMenu) return;
+    const options = claimMenu.querySelectorAll('div');
+    options.forEach(option => {
+      if (option.textContent === claimType) {
+        option.remove(); // remove the claim option
+      }
+    });
+  });
+
+  // Highlight the claimed ticket for the player who claimed it
+  if (player === currentPlayerName) {
+    const ticketWrappers = ticketsContainer.querySelectorAll('div.ticket');
+    const ticketDiv = ticketWrappers[ticketIndex];
+    let claimBadge = document.createElement('div');
+    claimBadge.textContent = claimType;
+    claimBadge.style.background = '#726cf8';
+    claimBadge.style.color = '#fff';
+    claimBadge.style.fontSize = '0.75rem';
+    claimBadge.style.padding = '2px 6px';
+    claimBadge.style.borderRadius = '6px';
+    claimBadge.style.marginTop = '4px';
+    claimBadge.className = 'claim-badge';
+    ticketDiv.parentElement.appendChild(claimBadge);
+  }
+
+  // Show notification for all players
+  const notificationsDiv = document.getElementById('claim-notifications');
+  const msg = document.createElement('div');
+  msg.textContent = `${player} claimed ${claimType}!`;
+  msg.style.background = '#726cf8';
+  msg.style.color = '#fff';
+  msg.style.padding = '8px 12px';
+  msg.style.marginBottom = '6px';
+  msg.style.borderRadius = '8px';
+  msg.style.fontWeight = '700';
+  msg.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+  notificationsDiv.appendChild(msg);
+
+  // Optionally remove message after 5 seconds
+  setTimeout(() => {
+    msg.remove();
+  }, 5000);
+});
+
+
+
+
+  // 🔹 End game → redirect
+  socket.on("endGame", ({ results }) => {
+    console.log("🔥 endGame event received!", results);
+
+    // ✅ Store tickets + claims properly per ticket
+    sessionStorage.setItem("gameResults", JSON.stringify(results));
+    window.location.href = "gameOver.html";
+  });
+
+  // Join room
+  socket.emit('joinRoom', { roomId, player: currentPlayerName });
+</script>
+
+</body>
+</html>
+

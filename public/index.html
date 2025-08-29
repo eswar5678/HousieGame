@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tambola - Choose Role</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0; padding: 0;
+      font-family: 'Poppins', sans-serif;
+    }
+    body, html {
+      height: 100%;
+      background: linear-gradient(135deg, #726cf8 0%, #5ad7ff 100%);
+      display: flex; justify-content: center; align-items: center;
+      color: #fff;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 2.5rem 3rem;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(90,215,255,0.2);
+      text-align: center;
+      width: 320px;
+    }
+    h1 {
+      font-weight: 600;
+      margin-bottom: 1.8rem;
+      font-size: 2rem;
+      letter-spacing: 1px;
+    }
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+    button {
+      background: #f2f9ff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #726cf8;
+      cursor: pointer;
+      transition: background 0.3s ease, color 0.3s ease;
+      box-shadow: 0 3px 10px rgba(114,108,248,0.3);
+    }
+    button:hover {
+      background: #726cf8;
+      color: #fff;
+      box-shadow: 0 5px 15px rgba(114,108,248,0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="container" role="main" id="landingPage">
+    <h1>Welcome to Tambola</h1>
+    <div class="options">
+      <button id="hostBtn" aria-label="Join as Host">Join as Host</button>
+      <button id="playerBtn" aria-label="Join as Player">Join as Player</button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('hostBtn').addEventListener('click', () => {
+      window.location.href = 'host.html';
+    });
+    document.getElementById('playerBtn').addEventListener('click', () => {
+      window.location.href = 'player.html';
+    });
+  </script>
+</body>
+</html>
