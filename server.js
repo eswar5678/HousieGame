@@ -1,11 +1,18 @@
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
-const app = express();
-const server = http.createServer(app);  
-const io = socketIo(server);
+const path = require("path");
 
-app.use(express.static("public"));
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+app.use(express.static(path.join(__dirname, "public")));
 
 const rooms = {};
 const calledNumbersPerRoom = {};
@@ -262,49 +269,41 @@ io.on("connection", (socket) => {
   });
 
   // Handle Claims
-  // Handle Claims
-// Handle Claims
-socket.on("ticketClaim", ({ roomId, player, ticketIndex, claimType }) => {
-  const room = rooms[roomId];
-  if (!room) return;
+  socket.on("ticketClaim", ({ roomId, player, ticketIndex, claimType }) => {
+    const room = rooms[roomId];
+    if (!room) return;
 
-  if (!claimedLinesPerRoom[roomId]) claimedLinesPerRoom[roomId] = {};
-  if (!claimedLinesPerRoom[roomId][ticketIndex]) claimedLinesPerRoom[roomId][ticketIndex] = [];
+    if (!claimedLinesPerRoom[roomId]) claimedLinesPerRoom[roomId] = {};
+    if (!claimedLinesPerRoom[roomId][ticketIndex]) claimedLinesPerRoom[roomId][ticketIndex] = [];
 
-  // prevent duplicate claim type for same ticket
-  const alreadyClaimed = claimsPerRoom[roomId].find(
-    c => c.ticketIndex === ticketIndex && c.claimType === claimType
-  );
-  if (alreadyClaimed) {
-    socket.emit("claimRejected", { ticketIndex, claimType, message: `${claimType} already claimed for this ticket!` });
-    return;
-  }
+    // prevent duplicate claim type for same ticket
+    const alreadyClaimed = claimsPerRoom[roomId].find(
+      c => c.ticketIndex === ticketIndex && c.claimType === claimType
+    );
+    if (alreadyClaimed) {
+      socket.emit("claimRejected", { ticketIndex, claimType, message: `${claimType} already claimed for this ticket!` });
+      return;
+    }
 
-  // Store claim
-  claimedLinesPerRoom[roomId][ticketIndex].push(claimType);
-  claimsPerRoom[roomId].push({ player, ticketIndex, claimType });
+    // Store claim
+    claimedLinesPerRoom[roomId][ticketIndex].push(claimType);
+    claimsPerRoom[roomId].push({ player, ticketIndex, claimType });
 
-  io.to(roomId).emit("claimApproved", { player, ticketIndex, claimType });
+    io.to(roomId).emit("claimApproved", { player, ticketIndex, claimType });
 
-  // If full house → end game
-  if (claimType.toLowerCase() === "full house") {
-    //console.log("✅ Full House claimed by:", player, "in room:", roomId);
+    // If full house → end game
+    if (claimType.toLowerCase() === "full house") {
+      clearInterval(room.autoCallInterval);
 
-    clearInterval(room.autoCallInterval);
+      const results = room.players.map(p => ({
+        name: p.name,
+        tickets: p.tickets || [],
+        claims: claimsPerRoom[roomId].filter(c => c.player === p.name)
+      }));
 
-    const results = room.players.map(p => ({
-      name: p.name,
-      tickets: p.tickets || [],
-      claims: claimsPerRoom[roomId].filter(c => c.player === p.name)
-    }));
-
-    //console.log("👉 Sending endGame event with results:", results);
-
-    io.to(roomId).emit("endGame", { results });
-  }
-});
-
-
+      io.to(roomId).emit("endGame", { results });
+    }
+  });
 
   // Pause/Resume
   socket.on("togglePause", ({ roomId }) => {
@@ -340,6 +339,8 @@ socket.on("ticketClaim", ({ roomId, player, ticketIndex, claimType }) => {
   });
 });
 
-server.listen(3000, () => {
-  console.log("Server started on port 3000");
+// ✅ Deployment-ready: use PORT from environment OR fallback to 3000 locally
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`✅ Server started on port ${PORT}`);
 });
