@@ -13,36 +13,48 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
       margin: 0;
-      padding: 2rem;
+      padding: 1rem;
     }
     h1 {
-      font-size: 2rem;
-      margin-bottom: 1.5rem;
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+      text-align: center;
       text-shadow: 0 0 10px rgba(0,0,0,0.3);
     }
-    table {
-      border-collapse: collapse;
-      background: rgba(255,255,255,0.9);
-      color: #726cf8;
+    .results-container {
       width: 100%;
-      max-width: 800px;
-      margin-bottom: 2rem;
+      max-width: 900px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
     }
-    th, td {
-      border: 1px solid #726cf8;
-      padding: 10px 14px;
-      text-align: center;
-      font-size: 1rem;
-      vertical-align: top;
+    .result-card {
+      background: rgba(255,255,255,0.95);
+      color: #333;
+      border-radius: 16px;
+      padding: 1rem;
+      box-shadow: 0 5px 15px rgba(114,108,248,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
     }
-    th {
-      background-color: #726cf8;
-      color: #fff;
-      font-weight: 600;
+    .result-card h2 {
+      font-size: 1.2rem;
+      color: #726cf8;
+      margin: 0 0 0.5rem 0;
+    }
+    .result-card p {
+      margin: 0.2rem 0;
+      font-size: 0.95rem;
+    }
+    .result-card .ticket-section {
+      margin-top: 0.5rem;
+      border-top: 1px solid #ddd;
+      padding-top: 0.5rem;
     }
     button {
+      margin-top: 2rem;
       padding: 12px 28px;
       border: none;
       border-radius: 12px;
@@ -58,60 +70,50 @@
       background: #FFFFFF26;
       color: #fff;
     }
-    .ticket-claims p, .ticket-numbers p {
-      margin: 2px 0;
-      font-size: 0.9rem;
-      color: #333;
-    }
   </style>
 </head>
 <body>
   <h1>🎉 Game Over 🎉</h1>
-  <table id="resultsTable">
-    <thead>
-      <tr>
-        <th>Player</th>
-        <th>No. of Tickets</th>
-        <th>Ticket Numbers</th>
-        <th>Claims per Ticket</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="results-container" id="resultsContainer"></div>
   <button onclick="goHome()">Go to Home</button>
 
   <script>
     const results = JSON.parse(sessionStorage.getItem("gameResults") || "[]");
-    const tbody = document.querySelector("#resultsTable tbody");
+    const container = document.getElementById("resultsContainer");
 
     if (results.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4">No results available</td></tr>`;
+      container.innerHTML = `<p>No results available</p>`;
     } else {
       results.forEach(player => {
-        const tr = document.createElement("tr");
+        const card = document.createElement("div");
+        card.classList.add("result-card");
 
-        // Ticket numbers column
         const ticketsHTML = player.tickets && player.tickets.length > 0
           ? player.tickets.map((t, i) => `<p>Ticket ${i + 1}</p>`).join('')
           : "—";
 
-        // Claims per ticket column
         const claimsHTML = player.tickets && player.tickets.length > 0
           ? player.tickets.map((t, i) => {
               const ticketClaims = player.claims
                 ? player.claims.filter(c => c.ticketIndex === i).map(c => c.claimType)
                 : [];
-              return `<p>${ticketClaims.length > 0 ? ticketClaims.join(", ") : "—"}</p>`;
+              return `<p><strong>Ticket ${i+1} Claims:</strong> ${ticketClaims.length > 0 ? ticketClaims.join(", ") : "—"}</p>`;
             }).join('')
           : "—";
 
-        tr.innerHTML = `
-          <td>${player.name}</td>
-          <td>${player.tickets ? player.tickets.length : 0}</td>
-          <td class="ticket-numbers">${ticketsHTML}</td>
-          <td class="ticket-claims">${claimsHTML}</td>
+        card.innerHTML = `
+          <h2>${player.name}</h2>
+          <p><strong>No. of Tickets:</strong> ${player.tickets ? player.tickets.length : 0}</p>
+          <div class="ticket-section">
+            <p><strong>Tickets:</strong></p>
+            ${ticketsHTML}
+          </div>
+          <div class="ticket-section">
+            <p><strong>Claims:</strong></p>
+            ${claimsHTML}
+          </div>
         `;
-        tbody.appendChild(tr);
+        container.appendChild(card);
       });
     }
 
