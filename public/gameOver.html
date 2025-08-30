@@ -76,6 +76,8 @@
   <h1>🎉 Game Over 🎉</h1>
   <div class="results-container" id="resultsContainer"></div>
   <button onclick="goHome()">Go to Home</button>
+  <button onclick="goRoom()">Restart</button>
+  
 
   <script>
     const results = JSON.parse(sessionStorage.getItem("gameResults") || "[]");
@@ -118,7 +120,11 @@
       sessionStorage.clear();
       window.location.href = "index.html";
     }
+    function goRoom() {
+      window.location.href = "room.html";
+    }
   </script>
 </body>
 </html>
+
 
