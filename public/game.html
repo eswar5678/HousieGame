@@ -430,8 +430,10 @@
             cell.addEventListener('click', () => {
               const num = parseInt(cell.dataset.number);
               if (calledNumbersSet.has(num)) {
-                cell.classList.toggle('marked');
-              }
+                if (!cell.classList.contains("marked")) {
+                 cell.classList.add("marked"); // ✅ only mark once
+                }
+			  }
             });
           }
           ticketDiv.appendChild(cell);
@@ -652,6 +654,7 @@
 
 </body>
 </html>
+
 
 
 
