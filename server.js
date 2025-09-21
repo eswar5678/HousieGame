@@ -33,34 +33,117 @@ function shuffle(array) {
 }
 
 // Generate Tambola ticket
-function generateTambolaTicket() {
-  const tambola = { rows: [] };
-  const rowRange = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+function generateTambolaTickets(): number[][][] {
+  // Column ranges as [min, max]
+  const ranges: Array<[number, number]> = [
+    [1, 9],
+    [10, 19],
+    [20, 29],
+    [30, 39],
+    [40, 49],
+    [50, 59],
+    [60, 69],
+    [70, 79],
+    [80, 90],
+  ];
 
-  for (let i = 0; i < 3; i++) {
-    const row_values = shuffle(rowRange.slice()).slice(0, 5).sort((a, b) => a - b);
-    tambola.rows.push(row_values);
-  }
-
-  const columns = [];
-  for (let i = 0; i < 9; i++) {
-    const range = [];
-    const max_count = i === 8 ? 10 : 9;
-    for (let j = 0; j < max_count; j++) {
-      range.push(i * 10 + j + 1);
+  // Shuffle helper
+  const shuffle = <T>(arr: T[]): T[] => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
     }
-    columns.push(shuffle(range).slice(0, 3).sort((a, b) => a - b));
-  }
+    return a;
+  };
 
-  let result = Array(3).fill(null).map(() => Array(9).fill(null));
-  for (let r = 0; r < 3; r++) {
-    const rowCols = tambola.rows[r];
-    for (let c = 0; c < rowCols.length; c++) {
-      const colIndex = rowCols[c] - 1;
-      result[r][colIndex] = columns[colIndex].shift();
+  // Prepare column number pools
+  const colNumbers: Array<number[]> = ranges.map(([min, max]) =>
+    shuffle(Array.from({ length: max - min + 1 }, (_, i) => min + i)),
+  );
+
+  const totalPerColumn: number[] = colNumbers.map((arr) => arr.length); // [9,10,10,...,11]
+  const TICKETS = 6;
+  const COLS = 9;
+
+  // counts[ticket][col]
+  const counts: number[][] = Array.from({ length: TICKETS }, () =>
+    Array(COLS).fill(1),
+  );
+  const ticketExtraCapacity: number[] = Array(TICKETS).fill(6); // 15 - 9
+
+  // distribute extras per column
+  for (let col = 0; col < COLS; col++) {
+    let extras = totalPerColumn[col] - TICKETS;
+    while (extras > 0) {
+      const candidates = Array.from({ length: TICKETS }, (_, t) => t)
+        .filter((t) => ticketExtraCapacity[t] > 0 && counts[t][col] < 3)
+        .sort((a, b) => ticketExtraCapacity[b] - ticketExtraCapacity[a]);
+
+      if (candidates.length === 0) break;
+      const topCap = ticketExtraCapacity[candidates[0]];
+      const topCandidates = candidates.filter(
+        (t) => ticketExtraCapacity[t] === topCap,
+      );
+      const chosen =
+        topCandidates[Math.floor(Math.random() * topCandidates.length)];
+
+      counts[chosen][col] += 1;
+      ticketExtraCapacity[chosen] -= 1;
+      extras -= 1;
     }
   }
-  return result;
+
+  // fix mismatches in row sums
+  for (let t = 0; t < TICKETS; t++) {
+    let sum = counts[t].reduce((a, b) => a + b, 0);
+    while (sum < 15) {
+      const c = counts[t].findIndex((v) => v < 3);
+      if (c === -1) break;
+      counts[t][c] += 1;
+      sum++;
+    }
+    while (sum > 15) {
+      const c = counts[t].findIndex((v) => v > 1);
+      if (c === -1) break;
+      counts[t][c] -= 1;
+      sum--;
+    }
+  }
+
+  // assign numbers to tickets
+  const ticketsCols: number[][][] = Array.from({ length: TICKETS }, () =>
+    Array.from({ length: COLS }, () => [] as number[]),
+  );
+  for (let col = 0; col < COLS; col++) {
+    for (let t = 0; t < TICKETS; t++) {
+      for (let k = 0; k < counts[t][col]; k++) {
+        const num = colNumbers[col].pop();
+        if (!num) throw new Error("Column depleted unexpectedly");
+        ticketsCols[t][col].push(num);
+      }
+      ticketsCols[t][col].sort((a, b) => a - b);
+    }
+  }
+
+  // Build 3x9 tickets
+  const tickets: number[][][] = Array.from({ length: TICKETS }, () =>
+    Array.from({ length: 3 }, () => Array(COLS).fill(0)),
+  );
+
+  for (let t = 0; t < TICKETS; t++) {
+    const rowFill = [0, 0, 0];
+    for (let col = 0; col < COLS; col++) {
+      const nums = ticketsCols[t][col];
+      const rowOrder = [0, 1, 2].sort((a, b) => rowFill[a] - rowFill[b]);
+      nums.forEach((num, i) => {
+        tickets[t][rowOrder[i]][col] = num;
+        rowFill[rowOrder[i]]++;
+      });
+    }
+  }
+
+  return tickets;
 }
 
 function emitRoomUpdate(roomId) {
@@ -203,11 +286,14 @@ io.on("connection", (socket) => {
 
   // Ticket selection
   socket.on("getAvailableTickets", ({ roomId, player }) => {
-    if (!rooms[roomId]) return;
-    pendingTicketsPerRoom[roomId] = pendingTicketsPerRoom[roomId] || {};
-    pendingTicketsPerRoom[roomId][player] = Array.from({ length: 6 }, () => generateTambolaTicket());
-    socket.emit("availableTickets", pendingTicketsPerRoom[roomId][player]);
-  });
+  if (!rooms[roomId]) return;
+  pendingTicketsPerRoom[roomId] = pendingTicketsPerRoom[roomId] || {};
+  
+  // Give each player their own valid strip (6 tickets covering 1–90 exactly once)
+  pendingTicketsPerRoom[roomId][player] = generateTambolaTickets();
+
+  socket.emit("availableTickets", pendingTicketsPerRoom[roomId][player]);
+});
 
   socket.on("selectTickets", ({ roomId, player, selectedIndices }) => {
     const room = rooms[roomId];
@@ -344,4 +430,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`✅ Server started on port ${PORT}`);
 });
+
 
