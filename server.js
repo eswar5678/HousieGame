@@ -33,9 +33,9 @@ function shuffle(array) {
 }
 
 // Generate Tambola ticket
-function generateTambolaTickets(): number[][][] {
+function generateTambolaTickets() {
   // Column ranges as [min, max]
-  const ranges: Array<[number, number]> = [
+  const ranges = [
     [1, 9],
     [10, 19],
     [20, 29],
@@ -48,7 +48,7 @@ function generateTambolaTickets(): number[][][] {
   ];
 
   // Shuffle helper
-  const shuffle = <T>(arr: T[]): T[] => {
+  const shuffle = (arr) => {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -58,19 +58,19 @@ function generateTambolaTickets(): number[][][] {
   };
 
   // Prepare column number pools
-  const colNumbers: Array<number[]> = ranges.map(([min, max]) =>
+  const colNumbers = ranges.map(([min, max]) =>
     shuffle(Array.from({ length: max - min + 1 }, (_, i) => min + i)),
   );
 
-  const totalPerColumn: number[] = colNumbers.map((arr) => arr.length); // [9,10,10,...,11]
+  const totalPerColumn = colNumbers.map((arr) => arr.length); // [9,10,10,...,11]
   const TICKETS = 6;
   const COLS = 9;
 
   // counts[ticket][col]
-  const counts: number[][] = Array.from({ length: TICKETS }, () =>
+  const counts = Array.from({ length: TICKETS }, () =>
     Array(COLS).fill(1),
   );
-  const ticketExtraCapacity: number[] = Array(TICKETS).fill(6); // 15 - 9
+  const ticketExtraCapacity = Array(TICKETS).fill(6); // 15 - 9
 
   // distribute extras per column
   for (let col = 0; col < COLS; col++) {
@@ -112,8 +112,8 @@ function generateTambolaTickets(): number[][][] {
   }
 
   // assign numbers to tickets
-  const ticketsCols: number[][][] = Array.from({ length: TICKETS }, () =>
-    Array.from({ length: COLS }, () => [] as number[]),
+  const ticketsCols = Array.from({ length: TICKETS }, () =>
+    Array.from({ length: COLS }, () => []),
   );
   for (let col = 0; col < COLS; col++) {
     for (let t = 0; t < TICKETS; t++) {
@@ -127,7 +127,7 @@ function generateTambolaTickets(): number[][][] {
   }
 
   // Build 3x9 tickets
-  const tickets: number[][][] = Array.from({ length: TICKETS }, () =>
+  const tickets = Array.from({ length: TICKETS }, () =>
     Array.from({ length: 3 }, () => Array(COLS).fill(0)),
   );
 
@@ -430,5 +430,6 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`✅ Server started on port ${PORT}`);
 });
+
 
 
