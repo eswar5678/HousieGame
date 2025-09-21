@@ -57,7 +57,7 @@ function generateTambolaTickets() {
     return a;
   };
 
-  // Prepare column number pools
+  // Prepare column number pools (shuffled)
   const colNumbers = ranges.map(([min, max]) =>
     shuffle(Array.from({ length: max - min + 1 }, (_, i) => min + i)),
   );
@@ -66,13 +66,11 @@ function generateTambolaTickets() {
   const TICKETS = 6;
   const COLS = 9;
 
-  // counts[ticket][col]
-  const counts = Array.from({ length: TICKETS }, () =>
-    Array(COLS).fill(1),
-  );
-  const ticketExtraCapacity = Array(TICKETS).fill(6); // 15 - 9
+  // counts[ticket][col] start with 1 in every cell
+  const counts = Array.from({ length: TICKETS }, () => Array(COLS).fill(1));
+  const ticketExtraCapacity = Array(TICKETS).fill(6); // each ticket needs 6 extra (15 - 9)
 
-  // distribute extras per column
+  // distribute extras per column (respect max 3 per cell)
   for (let col = 0; col < COLS; col++) {
     let extras = totalPerColumn[col] - TICKETS;
     while (extras > 0) {
@@ -94,7 +92,7 @@ function generateTambolaTickets() {
     }
   }
 
-  // fix mismatches in row sums
+  // ensure ticket sums are 15
   for (let t = 0; t < TICKETS; t++) {
     let sum = counts[t].reduce((a, b) => a + b, 0);
     while (sum < 15) {
@@ -111,7 +109,7 @@ function generateTambolaTickets() {
     }
   }
 
-  // assign numbers to tickets
+  // assign numbers from column pools into ticket-columns
   const ticketsCols = Array.from({ length: TICKETS }, () =>
     Array.from({ length: COLS }, () => []),
   );
@@ -119,27 +117,85 @@ function generateTambolaTickets() {
     for (let t = 0; t < TICKETS; t++) {
       for (let k = 0; k < counts[t][col]; k++) {
         const num = colNumbers[col].pop();
-        if (!num) throw new Error("Column depleted unexpectedly");
+        if (num === undefined) throw new Error("Column depleted unexpectedly");
         ticketsCols[t][col].push(num);
       }
+      // sort numbers inside the column ascending (so we can place them top->bottom)
       ticketsCols[t][col].sort((a, b) => a - b);
     }
   }
 
-  // Build 3x9 tickets
+  // Build tickets: use null for blanks (so front-end can render blank)
   const tickets = Array.from({ length: TICKETS }, () =>
-    Array.from({ length: 3 }, () => Array(COLS).fill(0)),
+    Array.from({ length: 3 }, () => Array(COLS).fill(null)),
   );
 
+  // Assign numbers to rows while keeping each column sorted top->bottom
   for (let t = 0; t < TICKETS; t++) {
-    const rowFill = [0, 0, 0];
+    const rowFill = [0, 0, 0]; // counts per row
     for (let col = 0; col < COLS; col++) {
-      const nums = ticketsCols[t][col];
-      const rowOrder = [0, 1, 2].sort((a, b) => rowFill[a] - rowFill[b]);
-      nums.forEach((num, i) => {
-        tickets[t][rowOrder[i]][col] = num;
-        rowFill[rowOrder[i]]++;
-      });
+      const nums = ticketsCols[t][col]; // already sorted ascending
+      const k = nums.length; // 1..3
+
+      // choose k rows with smallest fill (break ties by row index)
+      const rowsByFill = [0, 1, 2].sort((a, b) =>
+        rowFill[a] === rowFill[b] ? a - b : rowFill[a] - rowFill[b],
+      );
+      const chosenRows = rowsByFill.slice(0, k);
+
+      // To keep the column sorted top->bottom, place numbers into chosen rows
+      // in ascending row index (top row gets smallest number).
+      const chosenRowsAsc = chosenRows.slice().sort((a, b) => a - b);
+      for (let i = 0; i < k; i++) {
+        const r = chosenRowsAsc[i];
+        tickets[t][r][col] = nums[i];
+        rowFill[r] += 1;
+      }
+    }
+
+    // Rebalance pass: move values from overfull rows (>5) to underfull rows (<5)
+    // while preserving column order by re-sorting each affected column after moves.
+    let passes = 0;
+    while ((rowFill.some((v) => v > 5) || rowFill.some((v) => v < 5)) && passes < 100) {
+      const overIdx = rowFill.findIndex((v) => v > 5);
+      const underIdx = rowFill.findIndex((v) => v < 5);
+      if (overIdx === -1 || underIdx === -1) break;
+
+      let moved = false;
+      for (let col = 0; col < COLS; col++) {
+        if (tickets[t][overIdx][col] !== null && tickets[t][underIdx][col] === null) {
+          // move number
+          tickets[t][underIdx][col] = tickets[t][overIdx][col];
+          tickets[t][overIdx][col] = null;
+          rowFill[overIdx] -= 1;
+          rowFill[underIdx] += 1;
+
+          // rebuild this column to keep top->bottom order
+          const colNums = [];
+          const occRows = [];
+          for (let r = 0; r < 3; r++) {
+            if (tickets[t][r][col] !== null) {
+              colNums.push(tickets[t][r][col]);
+              occRows.push(r);
+            }
+          }
+          colNums.sort((a, b) => a - b);
+          occRows.sort((a, b) => a - b);
+          for (let i = 0; i < occRows.length; i++) {
+            tickets[t][occRows[i]][col] = colNums[i];
+          }
+
+          moved = true;
+          break;
+        }
+      }
+      if (!moved) break;
+      passes++;
+    }
+
+    if (!(rowFill[0] === 5 && rowFill[1] === 5 && rowFill[2] === 5)) {
+      // This should be extremely rare given correct counts; surface a clear error if it happens.
+      throw new Error("Failed to balance rows to 5 numbers each for a ticket");
     }
   }
 
@@ -430,6 +486,7 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`✅ Server started on port ${PORT}`);
 });
+
 
 
 
