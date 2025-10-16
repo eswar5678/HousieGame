@@ -12,15 +12,15 @@
     }
     body, html {
       height: 100%;
-      background: linear-gradient(135deg, #726cf8 0%, #5ad7ff 100%);
+      background: linear-gradient(135deg, #1e3a5f 0%, #2c5f7c 100%);
       display: flex; justify-content: center; align-items: center;
       color: #fff;
     }
     .container {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.95);
       padding: 2.5rem 3rem;
       border-radius: 18px;
-      box-shadow: 0 8px 32px rgba(90,215,255,0.2);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
       text-align: center;
       width: 320px;
     }
@@ -29,6 +29,7 @@
       margin-bottom: 1.8rem;
       font-size: 2rem;
       letter-spacing: 1px;
+      color: #1e3a5f;
     }
     .options {
       display: flex;
@@ -36,21 +37,21 @@
       gap: 1.2rem;
     }
     button {
-      background: #f2f9ff;
+      background: #2c5f7c;
       border: none;
       border-radius: 12px;
       padding: 14px 0;
       font-size: 1.2rem;
       font-weight: 600;
-      color: #726cf8;
+      color: #fff;
       cursor: pointer;
-      transition: background 0.3s ease, color 0.3s ease;
-      box-shadow: 0 3px 10px rgba(114,108,248,0.3);
+      transition: background 0.3s ease, transform 0.2s ease;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.15);
     }
     button:hover {
-      background: #726cf8;
-      color: #fff;
-      box-shadow: 0 5px 15px rgba(114,108,248,0.6);
+      background: #1e3a5f;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.25);
     }
   </style>
 </head>
